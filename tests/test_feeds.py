@@ -1,3 +1,4 @@
+import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -36,6 +37,83 @@ def test_atom_items_support_alternate_links_summary_and_content():
     assert items[0].published == datetime(2026, 11, 3, 8, 15, tzinfo=timezone.utc)
     assert items[1].summary == "Dockworkers rejected the latest offer."
     assert items[1].published == datetime(2026, 11, 3, 8, 0, tzinfo=timezone.utc)
+
+
+def test_rdf_rss_1_0_items_are_parsed():
+    items = parse_feed((FIXTURES / "sample_rdf.xml").read_bytes(), "Sample RDF")
+
+    assert len(items) == 1
+    assert items[0].title == "Leaders meet at regional summit"
+    assert items[0].link == "https://example.org/rdf/summit"
+    assert items[0].summary == "Talks focus on trade."
+    assert items[0].published == datetime(2026, 11, 3, 7, 45, tzinfo=timezone.utc)
+
+
+class _FakeResponse:
+    def __init__(self, body):
+        self._body = body
+
+    def read(self, _limit):
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def _http_429(retry_after=None):
+    headers = {"Retry-After": retry_after} if retry_after else {}
+    return urllib.error.HTTPError("https://x.example", 429, "Too Many Requests", headers, None)
+
+
+def test_rate_limited_feed_is_retried_once_after_waiting(monkeypatch):
+    body = (FIXTURES / "sample_rss.xml").read_bytes()
+    calls, sleeps = [], []
+
+    def fake_urlopen(request, timeout):
+        calls.append(request.full_url)
+        if len(calls) == 1:
+            raise _http_429("3")
+        return _FakeResponse(body)
+
+    monkeypatch.setattr(feeds.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(feeds.time, "sleep", sleeps.append)
+
+    items = feeds.fetch_feed(Outlet("Limited", "https://x.example/rss", "en", "approved"))
+
+    assert len(calls) == 2
+    assert sleeps == [3.0]
+    assert len(items) == 2
+
+
+def test_retry_wait_is_capped_and_a_second_429_is_reported(monkeypatch):
+    sleeps = []
+
+    def always_limited(request, timeout):
+        raise _http_429("600")
+
+    monkeypatch.setattr(feeds.urllib.request, "urlopen", always_limited)
+    monkeypatch.setattr(feeds.time, "sleep", sleeps.append)
+
+    with pytest.raises(urllib.error.HTTPError):
+        feeds.fetch_feed(Outlet("Limited", "https://x.example/rss", "en", "approved"))
+    assert sleeps == [feeds.MAX_RETRY_WAIT]
+
+
+def test_other_http_errors_are_not_retried(monkeypatch):
+    calls = []
+
+    def not_found(request, timeout):
+        calls.append(1)
+        raise urllib.error.HTTPError("https://x.example", 404, "Not Found", {}, None)
+
+    monkeypatch.setattr(feeds.urllib.request, "urlopen", not_found)
+
+    with pytest.raises(urllib.error.HTTPError):
+        feeds.fetch_feed(Outlet("Gone", "https://x.example/rss", "en", "approved"))
+    assert len(calls) == 1
 
 
 def test_item_ids_are_stable_and_unique_per_outlet():

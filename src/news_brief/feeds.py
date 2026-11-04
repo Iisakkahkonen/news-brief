@@ -10,7 +10,9 @@ from __future__ import annotations
 import hashlib
 import html.parser
 import re
+import time
 import tomllib
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -21,6 +23,10 @@ from pathlib import Path
 USER_AGENT = "news-brief/0.1 (+https://github.com/Iisakkahkonen/news-brief)"
 MAX_FEED_BYTES = 2_000_000
 ATOM = "{http://www.w3.org/2005/Atom}"
+RDF = "{http://www.w3.org/1999/02/22-rdf-syntax-ns#}"
+RSS1 = "{http://purl.org/rss/1.0/}"
+DC = "{http://purl.org/dc/elements/1.1/}"
+MAX_RETRY_WAIT = 10.0  # seconds; longer Retry-After requests are not waited out
 VALID_STATUSES = ("proposed", "approved")
 
 
@@ -139,14 +145,40 @@ def _parse_atom(root: ET.Element, outlet: str) -> list[Item]:
     return items
 
 
+def _parse_rdf(root: ET.Element, outlet: str) -> list[Item]:
+    """RSS 1.0 (RDF): items sit beside the channel, in the RSS 1.0 namespace."""
+    items = []
+    for el in root.findall(RSS1 + "item"):
+        link = el.findtext(RSS1 + "link", "")
+        description = el.find(RSS1 + "description")
+        item = _make_item(
+            outlet,
+            title=el.findtext(RSS1 + "title", ""),
+            link=link,
+            summary_html="".join(description.itertext()) if description is not None else "",
+            published=el.findtext(DC + "date"),
+            guid=el.get(RDF + "about", "") or link,
+        )
+        if item:
+            items.append(item)
+    return items
+
+
 def parse_feed(xml_bytes: bytes, outlet: str) -> list[Item]:
-    """Parse an RSS 2.0 or Atom document into items, newest first as published."""
+    """Parse an RSS 2.0, RSS 1.0 (RDF) or Atom document into items."""
     root = ET.fromstring(xml_bytes)
     if root.tag == ATOM + "feed":
         return _parse_atom(root, outlet)
     if root.tag == "rss":
         return _parse_rss(root, outlet)
+    if root.tag == RDF + "RDF":
+        return _parse_rdf(root, outlet)
     raise ValueError(f"unsupported feed format: root element <{root.tag}>")
+
+
+def _read(request: urllib.request.Request, timeout: float) -> bytes:
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read(MAX_FEED_BYTES + 1)
 
 
 def fetch_feed(outlet: Outlet, timeout: float = 20.0) -> list[Item]:
@@ -157,8 +189,16 @@ def fetch_feed(outlet: Outlet, timeout: float = 20.0) -> list[Item]:
             "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.5",
         },
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        body = response.read(MAX_FEED_BYTES + 1)
+    try:
+        body = _read(request, timeout)
+    except urllib.error.HTTPError as exc:
+        if exc.code != 429:
+            raise
+        # Rate limited: wait as the server asks (capped), then try once more.
+        retry_after = exc.headers.get("Retry-After", "") if exc.headers else ""
+        wait = float(retry_after) if retry_after.isdigit() else 5.0
+        time.sleep(min(wait, MAX_RETRY_WAIT))
+        body = _read(request, timeout)
     if len(body) > MAX_FEED_BYTES:
         raise ValueError(f"feed is larger than {MAX_FEED_BYTES} bytes")
     return parse_feed(body, outlet.name)

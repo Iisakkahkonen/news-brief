@@ -1,10 +1,13 @@
 # Outlets the brief may read. Only status = "approved" entries are fetched.
 #
-# STATUS: every entry is "proposed". None has been approved yet, and none of
-# the URLs has been checked. The build environment could not reach news sites,
-# so each URL must be confirmed with:
-#   python -m news_brief --include-proposed
-# Entries that fail should be fixed or dropped before approval.
+# STATUS: every entry is still "proposed"; none is approved yet.
+# First fetch from the user's machine (2026-11-04): 13 of 17 feeds worked
+# (373 items). Remaining problems:
+#   - Deutsche Welle: RSS 1.0 (RDF); the reader now supports it, retest.
+#   - France 24: HTTP 429 rate limit; the reader now retries once, retest.
+#   - Kyiv Independent, NHK World-Japan: HTTP 404, the URL is wrong. Find the
+#     current feed address on each site and replace it, or drop the outlet.
+# Check any change with:  python -m news_brief --include-proposed
 
 [[outlet]]
 name = "BBC News (World)"
@@ -68,7 +71,7 @@ status = "proposed"
 
 [[outlet]]
 name = "Kyiv Independent"
-url = "https://kyivindependent.com/feed/"
+url = "https://kyivindependent.com/feed/"  # 404 on 2026-11-04, needs a new URL
 language = "en"
 status = "proposed"
 
@@ -98,7 +101,7 @@ status = "proposed"
 
 [[outlet]]
 name = "NHK World-Japan"
-url = "https://www3.nhk.or.jp/nhkworld/en/news/feeds/"
+url = "https://www3.nhk.or.jp/nhkworld/en/news/feeds/"  # 404 on 2026-11-04, needs a new URL
 language = "en"
 status = "proposed"
 

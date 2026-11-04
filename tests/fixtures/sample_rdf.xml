@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns="http://purl.org/rss/1.0/"
+         xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel rdf:about="https://example.org/rdf">
+    <title>Sample RDF World</title>
+    <link>https://example.org/rdf</link>
+  </channel>
+  <item rdf:about="https://example.org/rdf/summit">
+    <title>Leaders meet at regional summit</title>
+    <link>https://example.org/rdf/summit</link>
+    <description>&lt;p&gt;Talks focus on &lt;b&gt;trade&lt;/b&gt;.&lt;/p&gt;</description>
+    <dc:date>2026-11-03T07:45:00Z</dc:date>
+  </item>
+  <item rdf:about="https://example.org/rdf/no-link">
+    <title>Item without a link is dropped</title>
+  </item>
+</rdf:RDF>
