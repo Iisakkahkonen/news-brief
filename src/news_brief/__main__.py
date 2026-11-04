@@ -10,8 +10,20 @@ import argparse
 from pathlib import Path
 
 from news_brief.feeds import fetch_all, load_outlets, select
+from news_brief.group import group_items
 
 DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "outlets.toml"
+
+
+def print_groups(items) -> None:
+    clusters = group_items(items)
+    multi = [c for c in clusters if len(c.items) > 1]
+    print(f"{len(items)} items -> {len(clusters)} groups ({len(multi)} with more than one item)\n")
+    for cluster in multi[:25]:
+        print(f"== {len(cluster.items)} items from {len(cluster.outlets)} outlets")
+        for item in cluster.items:
+            print(f"   - {item.outlet}: {item.title}")
+        print()
 
 
 def main() -> int:
@@ -19,6 +31,9 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--include-proposed", action="store_true",
                         help="also fetch outlets that are not approved yet")
+    parser.add_argument("--show-groups", action="store_true",
+                        help="fetch, then print the events the items are grouped into "
+                             "(no AI model involved; use it to tune the grouping)")
     args = parser.parse_args()
 
     outlets = select(load_outlets(args.config), include_proposed=args.include_proposed)
@@ -27,6 +42,9 @@ def main() -> int:
         return 0
 
     items, errors = fetch_all(outlets)
+    if args.show_groups:
+        print_groups(items)
+        return 0
     for outlet in outlets:
         count = sum(1 for item in items if item.outlet == outlet.name)
         status = "FAILED" if outlet.name in errors else f"{count} items"
