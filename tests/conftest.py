@@ -35,3 +35,21 @@ def day_of_news():
         make_item("tech1", "Euronews", "European regulators fine ferry operator over safety lapses",
                   "The penalty follows an inspection of three vessels.", 12),
     ]
+
+
+@pytest.fixture(scope="session")
+def real_groups():
+    """Real headlines (titles only) from the first --show-groups run, by label."""
+    from pathlib import Path
+
+    groups, current = {}, None
+    path = Path(__file__).parent / "fixtures" / "real_headlines_2026-11-04.txt"
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("## "):
+            current = line[3:]
+            groups[current] = []
+        elif line.strip() and not line.startswith("#"):
+            outlet, title = (part.strip() for part in line.split("|", 1))
+            groups[current].append(
+                make_item(f"{current[:3]}{len(groups[current]):02d}", outlet, title))
+    return groups

@@ -1,0 +1,61 @@
+# Real headlines from the first --show-groups run on 2026-11-04 (titles only).
+# Each "## label" block is one group the first version of group_items produced.
+# Used to check that oversized groups are split into separate stories.
+
+## midterms-blob
+BBC News (World) | Iran's chief negotiator says Americans voted 'no to war'
+Al Jazeera (All) | US midterm election results live: Trump blames Iran war after losses
+France 24 (English) | 🔴 Live: Trump says going to war in Iran was worth it, despite midterm rout
+The Hindu (International) | U.S. midterm elections 2026 LIVE: Trump says 'largely true' Iran war caused election loss
+Al Jazeera (All) | Presidential hopeful Vance appears to question Iran war after polls debacle
+Times of Israel | Vance: GOP lost midterms due to Iran war, voters want ‘change’ in Israel relationship
+Dawn (World) | US Vice President JD Vance says Iran war is 'the reason we lost' midterms
+The Hindu (International) | Vance tries to distance himself from Iran war after Republican Party’s deep losses in midterm elections
+The Hindu (International) | U.S. VP Vance says Iran war was the reason Republicans lost midterms
+The Hindu (International) | Trump says Republicans harmed by Iran war, inability to ‘transfer the love’ for him
+Dawn (World) | US signals progress in Iran talks to avert flare-up
+The Guardian (World) | US strikes Iran’s Qeshm Island as Vance voices optimism about a deal
+France 24 (English) | US midterms: Iran's deputy parliament speaker reacts to Trump's elections setback
+The Guardian (World) | Iran unveils ‘We will kill Trump’ banner – but US president may now be tempted to resume bombing
+Al Jazeera (All) | Iranians celebrate Democrat victory in US midterms
+Dawn (World) | Iran supreme leader says those expecting US policy shift 'seriously mistaken'
+Deutsche Welle (World) | What the Democrats' midterms win means for the US economy and Trump
+The Hindu (International) | Democrats win U.S. Congress in midterm rout of U.S. President Donald Trump
+The Hindu (International) | Democrats win U.S. House in growing midterms wave against Trump
+Dawn (World) | Democrats win US Congress in midterm rout of Trump
+Dawn (World) | Trump’s poor rating offers Democrats midterm opening
+Dawn (World) | Lone Star turns blue: Democrats Talarico, Hinojosa topple Texas Republicans
+The Hindu (International) | U.S. midterm election results: Senate, House and Governor shifts before and after
+The Hindu (International) | In huge blow to Republicans, Democrat Talarico flips U.S. Senate seat in Texas
+The Hindu (International) | U.S. midterm elections: Democrat Roy Cooper flips Republican-held US Senate seat in North Carolina
+France 24 (English) | US midterms bring a wave of historic firsts as minorities win key races
+Dawn (World) | Historic leadership firsts for minorities across US in midterm vote
+The Hindu (International) | U.S. Midterm election Democrats win five governor races as Hinojosa, Bottoms, Haaland make history
+The Hindu (International) | Democrat Keisha Lance Bottoms becomes first Black woman Governor in U.S.
+Al Jazeera (All) | Democratic voters celebrate El-Sayed’s Michigan win in election ‘blue wave’
+Dawn (World) | 'We did it!': Democrat El-Sayed hails US Senate win, becomes first Muslim elected to upper chamber of Congress
+The Hindu (International) | Who is Abdul El-Sayed, first Muslim U.S. Senator-elect?
+The Hindu (International) | Democrat Abdul El-Sayed claims victory in Michigan Senate battle
+Al Jazeera (All) | Democrat leaders hail midterm election success
+France 24 (English) | European leaders welcome Democrats' US midterms election win
+Anadolu Agency (World) | World leaders offer mixed reactions to Democrats' victory in US midterm elections
+Deutsche Welle (World) | What US midterm elections mean for Ukraine, Iran and elsewhere
+Anadolu Agency (World) | FACTBOX - How will Democrats and Republicans share power in US Congress after midterms?
+
+## israel-blob
+BBC News (World) | Israel's president begins consultations with parties after election deadlock
+The Guardian (World) | The midterms were a thumping rebuke of the US-Israel relationship
+The Guardian (World) | Trump claims US will end military aid to Israel by end of this year
+NPR (World) | Abdul El-Sayed welcomes Trump's plan to cut Israel aid, calls for end to arms sales
+Times of Israel | Elections cause political earthquakes in both Israel and US… and between them
+Dawn (World) | 'We made a deal months ago': Trump says US will stop $4 billion funding to Israel at end of 2026
+Anadolu Agency (World) | INTERVIEW - Israel’s Arab Joint List likely to recommend Eisenkot to form government, lawmaker says
+Dawn (World) | Israel president urges compromise after divisive election
+Dawn (World) | Israel election commission rejects Netanyahu charges of fraud
+The Hindu (International) | Israel President urges compromise after divisive election
+The Hindu (International) | Israel's unassuming President Herzog holds keys to next government
+The Guardian (World) | Israel’s election commission rejects Netanyahu claims of voting fraud
+The Hindu (International) | Israel’s President accepts certified election results in a blow to Netanyahu’s claim of vote fraud
+The Hindu (International) | Israel election commission rejects Benjamin Netanyahu charges of fraud
+Anadolu Agency (World) | Netanyahu ‘toxic’ to US lawmakers who once backed Israel: Opposition leader
+France 24 (English) | Netanyahu claims 'serious concerns' of foreign spending to sway Israeli election

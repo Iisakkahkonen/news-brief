@@ -18,6 +18,9 @@ from dataclasses import dataclass, field
 from news_brief.feeds import Item
 
 DEFAULT_THRESHOLD = 0.30
+MAX_CLUSTER_ITEMS = 10   # a group larger than this is split into sub-stories
+MAX_THRESHOLD = 0.90     # stop raising the threshold when splitting
+MAX_PROMPT_ITEMS = 12    # most items ever sent to the model for one event
 
 STOPWORDS = frozenset("""
 a about after again against all also an and any are as at be been before being
@@ -61,6 +64,26 @@ class Cluster:
     def by_id(self) -> dict[str, Item]:
         return {item.item_id: item for item in self.items}
 
+    def for_prompt(self, limit: int = MAX_PROMPT_ITEMS) -> "Cluster":
+        """At most ``limit`` items, taking turns across outlets, earliest first.
+
+        Keeps the prompt small and the range of outlets wide. The verifier is
+        run against this reduced group, so a sentence can only cite items the
+        model was actually shown.
+        """
+        if len(self.items) <= limit:
+            return self
+        ordered = sorted(self.items, key=lambda i: (i.published is None, i.published))
+        per_outlet: dict[str, list[Item]] = {}
+        for item in ordered:
+            per_outlet.setdefault(item.outlet, []).append(item)
+        chosen: list[Item] = []
+        while len(chosen) < limit and any(per_outlet.values()):
+            for queue in per_outlet.values():
+                if queue and len(chosen) < limit:
+                    chosen.append(queue.pop(0))
+        return Cluster(chosen)
+
 
 def _term_counts(item: Item) -> Counter:
     counts = Counter(tokens(item.title))
@@ -74,7 +97,36 @@ def _norm(vector: dict[str, float]) -> float:
 
 
 def group_items(items: list[Item], threshold: float = DEFAULT_THRESHOLD) -> list[Cluster]:
-    """Cluster items by similarity. Biggest events (most outlets) come first."""
+    """Cluster items by similarity. Biggest events (most outlets) come first.
+
+    Big news days produce chains: "US midterms" links Iran, the Texas Senate
+    race and a governor's race into one huge group. Any group over
+    MAX_CLUSTER_ITEMS is therefore clustered again on its own, where words
+    shared by the whole group count for little and the sub-stories separate.
+    """
+    clusters: list[Cluster] = []
+    for cluster in _cluster(items, threshold):
+        clusters.extend(_split_if_large(cluster, threshold))
+    clusters.sort(key=lambda c: (-len(c.outlets), -len(c.items)))
+    return clusters
+
+
+def _split_if_large(cluster: Cluster, threshold: float) -> list[Cluster]:
+    if len(cluster.items) <= MAX_CLUSTER_ITEMS:
+        return [cluster]
+    level = threshold
+    while level <= MAX_THRESHOLD:
+        parts = _cluster(cluster.items, level)
+        if len(parts) > 1:
+            result: list[Cluster] = []
+            for part in parts:
+                result.extend(_split_if_large(part, level))
+            return result
+        level = round(level + 0.1, 2)
+    return [cluster]  # cannot be told apart; for_prompt() limits what the model sees
+
+
+def _cluster(items: list[Item], threshold: float) -> list[Cluster]:
     if not items:
         return []
 
@@ -103,7 +155,6 @@ def group_items(items: list[Item], threshold: float = DEFAULT_THRESHOLD) -> list
             sums.append(dict(vec))
 
     clusters, sums = _merge_similar(clusters, sums, threshold)
-    clusters.sort(key=lambda c: (-len(c.outlets), -len(c.items)))
     return clusters
 
 

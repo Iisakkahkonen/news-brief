@@ -43,6 +43,7 @@ def build_brief(items: list[Item], model: ModelClient, *, max_events: int = 12,
     clusters = [c for c in group_items(items, threshold) if len(c.outlets) >= min_outlets]
 
     for cluster in clusters[:max_events]:
+        cluster = cluster.for_prompt()
         headline = cluster.lead.title
         try:
             sentences = summarise_cluster(cluster, model)

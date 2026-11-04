@@ -78,3 +78,77 @@ def test_a_full_day_of_items_groups_quickly():
     clusters = group_items(items)
     assert time.perf_counter() - start < 5.0
     assert sum(len(c.items) for c in clusters) == 410
+
+
+# --- splitting oversized groups (tuned on real headlines from 2026-11-04) -------
+
+def _together(clusters, *needles):
+    """True if, for each needle, some one cluster holds a title containing it
+    and all needles share that cluster."""
+    for cluster in clusters:
+        titles = " || ".join(i.title for i in cluster.items)
+        if all(n in titles for n in needles):
+            return True
+    return False
+
+
+def test_midterms_blob_is_split_into_separate_stories(real_groups):
+    from news_brief.group import MAX_CLUSTER_ITEMS, _split_if_large
+    blob = Cluster(real_groups["midterms-blob"])
+    assert len(blob.items) == 38
+
+    parts = _split_if_large(blob, 0.30)
+
+    assert len(parts) > 5
+    assert all(len(p.items) <= MAX_CLUSTER_ITEMS for p in parts)
+    assert sum(len(p.items) for p in parts) == 38
+    # same story stays together ...
+    assert _together(parts, "Talarico flips", "Lone Star turns blue")
+    assert _together(parts, "says Iran war was the reason", "Vance: GOP lost midterms")
+    assert _together(parts, "Who is Abdul El-Sayed", "'We did it!'")
+    # ... different stories come apart
+    assert not _together(parts, "Talarico flips", "says Iran war was the reason")
+    assert not _together(parts, "Who is Abdul El-Sayed", "Lone Star turns blue")
+
+
+def test_israel_blob_separates_the_fraud_claims_from_the_aid_story(real_groups):
+    from news_brief.group import _split_if_large
+    parts = _split_if_large(Cluster(real_groups["israel-blob"]), 0.30)
+
+    assert _together(parts, "election commission rejects Netanyahu charges of fraud",
+                     "rejects Benjamin Netanyahu charges of fraud")
+    assert _together(parts, "Trump claims US will end military aid",
+                     "welcomes Trump's plan to cut Israel aid")
+    assert not _together(parts, "Trump claims US will end military aid",
+                         "rejects Benjamin Netanyahu charges of fraud")
+
+
+def test_small_groups_are_left_alone(day_of_news):
+    from news_brief.group import _split_if_large
+    cluster = Cluster(day_of_news[:3])
+    assert _split_if_large(cluster, 0.30) == [cluster]
+
+
+def test_a_group_that_cannot_be_told_apart_stays_whole():
+    from news_brief.group import _split_if_large
+    same = Cluster([make_item(f"s{n}", f"Outlet{n}", "Quake strikes coast", "Buildings fell.")
+                    for n in range(15)])
+    assert _split_if_large(same, 0.30) == [same]
+
+
+# --- limiting what the model is shown ------------------------------------------
+
+def test_for_prompt_returns_small_groups_unchanged(day_of_news):
+    cluster = Cluster(day_of_news[:3])
+    assert cluster.for_prompt(limit=12) is cluster
+
+
+def test_for_prompt_takes_turns_across_outlets_earliest_first():
+    items = [make_item(f"a{n}", "BigOutlet", f"Quake report {n}", hour=n) for n in range(8)]
+    items += [make_item("b0", "Small1", "Quake report b", hour=20),
+              make_item("c0", "Small2", "Quake report c", hour=21)]
+    chosen = Cluster(items).for_prompt(limit=4)
+
+    assert len(chosen.items) == 4
+    assert {i.outlet for i in chosen.items} == {"BigOutlet", "Small1", "Small2"}
+    assert [i.item_id for i in chosen.items if i.outlet == "BigOutlet"] == ["a0", "a1"]

@@ -7,12 +7,25 @@ per outlet. Use --include-proposed to test feed URLs before approving them.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from news_brief.feeds import fetch_all, load_outlets, select
 from news_brief.group import group_items
 
 DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "outlets.toml"
+
+
+def save_items(items, path: Path) -> None:
+    rows = [
+        {
+            "item_id": i.item_id, "outlet": i.outlet, "title": i.title,
+            "summary": i.summary, "link": i.link,
+            "published": i.published.isoformat() if i.published else None,
+        }
+        for i in items
+    ]
+    path.write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def print_groups(items) -> None:
@@ -34,6 +47,9 @@ def main() -> int:
     parser.add_argument("--show-groups", action="store_true",
                         help="fetch, then print the events the items are grouped into "
                              "(no AI model involved; use it to tune the grouping)")
+    parser.add_argument("--save-items", type=Path, metavar="FILE",
+                        help="write every fetched item (title, summary, link, date) to a "
+                             "JSON file, so grouping can be tuned on the exact data")
     args = parser.parse_args()
 
     outlets = select(load_outlets(args.config), include_proposed=args.include_proposed)
@@ -42,6 +58,9 @@ def main() -> int:
         return 0
 
     items, errors = fetch_all(outlets)
+    if args.save_items:
+        save_items(items, args.save_items)
+        print(f"Saved {len(items)} items to {args.save_items}")
     if args.show_groups:
         print_groups(items)
         return 0

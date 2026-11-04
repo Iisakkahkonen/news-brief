@@ -135,3 +135,23 @@ def test_rendered_brief_reports_removed_sentences_and_incomplete_runs(day_of_new
 
     assert "Sentences removed by that check today: 1." in text
     assert "This brief is incomplete" in text
+
+
+def test_model_sees_at_most_the_prompt_limit_and_cannot_cite_hidden_items():
+    from news_brief.group import MAX_PROMPT_ITEMS
+    from conftest import make_item
+
+    items = [make_item(f"q{n:02d}", f"Outlet{n}", "Quake strikes coast", "Buildings fell.", hour=n % 20)
+             for n in range(20)]
+    hidden = "q19"   # latest of the identical items, so it is not among those shown
+    model = ScriptedModel(answer(
+        ("Quake strikes coast.", ["q00"]),
+        ("Buildings fell.", [hidden]),
+    ))
+    brief = build_brief(items, model)
+
+    shown = [line for line in model.prompts[0].splitlines() if line.startswith("[q")]
+    assert len(shown) == MAX_PROMPT_ITEMS
+    assert f"[{hidden}]" not in model.prompts[0]
+    assert [s.text for s in brief.sections[0].sentences] == ["Quake strikes coast."]
+    assert any(hidden in r.rejection.reason for r in brief.rejections)
