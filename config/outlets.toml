@@ -1,112 +1,96 @@
-# Outlets the brief may read. Only status = "approved" entries are fetched.
+# Outlets the brief reads. Only status = "approved" entries are fetched.
 #
-# STATUS: every entry is still "proposed"; none is approved yet.
-# First fetch from the user's machine (2026-11-04): 13 of 17 feeds worked
-# (373 items). Remaining problems:
-#   - Deutsche Welle: RSS 1.0 (RDF); the reader now supports it, retest.
-#   - France 24: HTTP 429 rate limit; the reader now retries once, retest.
-#   - Kyiv Independent, NHK World-Japan: HTTP 404, the URL is wrong. Find the
-#     current feed address on each site and replace it, or drop the outlet.
-# Check any change with:  python -m news_brief --include-proposed
+# Approved 2026-11-04 after a first fetch from the user's machine: 15 of 17
+# proposed feeds worked (410 items). Dropped because their feed URLs returned
+# 404: Kyiv Independent, NHK World-Japan. Add them back once a working feed
+# URL is found. Check any change with:  python -m news_brief
 
 [[outlet]]
 name = "BBC News (World)"
 url = "https://feeds.bbci.co.uk/news/world/rss.xml"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "Deutsche Welle (World)"
 url = "https://rss.dw.com/rdf/rss-en-world"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "Al Jazeera (All)"
 url = "https://www.aljazeera.com/xml/rss/all.xml"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "The Guardian (World)"
 url = "https://www.theguardian.com/world/rss"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "NPR (World)"
 url = "https://feeds.npr.org/1004/rss.xml"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "France 24 (English)"
 url = "https://www.france24.com/en/rss"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "Euronews"
 url = "https://www.euronews.com/rss"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "UN News"
 url = "https://news.un.org/feed/subscribe/en/news/all/rss.xml"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "ReliefWeb (Updates)"
 url = "https://reliefweb.int/updates/rss.xml"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "Anadolu Agency (World)"
 url = "https://www.aa.com.tr/en/rss/default?cat=world"
 language = "en"
-status = "proposed"
-
-[[outlet]]
-name = "Kyiv Independent"
-url = "https://kyivindependent.com/feed/"  # 404 on 2026-11-04, needs a new URL
-language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "Times of Israel"
 url = "https://www.timesofisrael.com/feed/"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "Dawn (World)"
 url = "https://www.dawn.com/feeds/world"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "The Hindu (International)"
 url = "https://www.thehindu.com/news/international/feeder/default.rss"
 language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "allAfrica (Latest)"
 url = "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"
 language = "en"
-status = "proposed"
-
-[[outlet]]
-name = "NHK World-Japan"
-url = "https://www3.nhk.or.jp/nhkworld/en/news/feeds/"  # 404 on 2026-11-04, needs a new URL
-language = "en"
-status = "proposed"
+status = "approved"
 
 [[outlet]]
 name = "Yle News (English)"
 url = "https://feeds.yle.fi/uutiset/v1/recent.rss?publisherIds=YLE_NEWS"
 language = "en"
-status = "proposed"
+status = "approved"

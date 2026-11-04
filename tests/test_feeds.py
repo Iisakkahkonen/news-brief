@@ -185,11 +185,14 @@ def test_select_uses_only_approved_outlets_by_default():
     assert [o.name for o in select(outlets, include_proposed=True)] == ["A", "B"]
 
 
-def test_shipped_config_has_no_approved_outlets_yet():
-    # Nothing has been approved, so the shipped config must not fetch anything.
+def test_shipped_config_is_a_valid_approved_outlet_list():
     outlets = load_outlets(Path(__file__).parents[1] / "config" / "outlets.toml")
-    assert outlets, "config should list proposed outlets"
-    assert select(outlets) == []
+    approved = select(outlets)
+
+    assert len(approved) >= 15, "the plan calls for 15-30 outlets"
+    assert len({o.name for o in outlets}) == len(outlets), "duplicate outlet name"
+    assert len({o.url for o in outlets}) == len(outlets), "duplicate feed URL"
+    assert all(o.url.startswith("https://") for o in outlets)
 
 
 def test_one_broken_feed_does_not_stop_the_run(monkeypatch):
