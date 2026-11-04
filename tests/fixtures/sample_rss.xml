@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Sample World</title>
+    <link>https://example.org/world</link>
+    <item>
+      <title>Ceasefire talks resume in Geneva</title>
+      <link>https://example.org/world/ceasefire-talks</link>
+      <description><![CDATA[<p>Negotiators met for a <b>second day</b> &amp; agreed to continue.</p>]]></description>
+      <pubDate>Tue, 03 Nov 2026 09:30:00 GMT</pubDate>
+      <guid>https://example.org/world/ceasefire-talks</guid>
+    </item>
+    <item>
+      <title>   Floods close roads in   the north  </title>
+      <link>https://example.org/world/floods</link>
+      <description>Heavy rain closed three highways.</description>
+      <pubDate>Tue, 03 Nov 2026 12:00:00 +0200</pubDate>
+    </item>
+    <item>
+      <title></title>
+      <link>https://example.org/world/no-title</link>
+      <description>This item has no title and must be dropped.</description>
+    </item>
+  </channel>
+</rss>

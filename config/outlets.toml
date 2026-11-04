@@ -1,0 +1,109 @@
+# Outlets the brief may read. Only status = "approved" entries are fetched.
+#
+# STATUS: every entry is "proposed". None has been approved yet, and none of
+# the URLs has been checked. The build environment could not reach news sites,
+# so each URL must be confirmed with:
+#   python -m news_brief --include-proposed
+# Entries that fail should be fixed or dropped before approval.
+
+[[outlet]]
+name = "BBC News (World)"
+url = "https://feeds.bbci.co.uk/news/world/rss.xml"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "Deutsche Welle (World)"
+url = "https://rss.dw.com/rdf/rss-en-world"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "Al Jazeera (All)"
+url = "https://www.aljazeera.com/xml/rss/all.xml"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "The Guardian (World)"
+url = "https://www.theguardian.com/world/rss"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "NPR (World)"
+url = "https://feeds.npr.org/1004/rss.xml"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "France 24 (English)"
+url = "https://www.france24.com/en/rss"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "Euronews"
+url = "https://www.euronews.com/rss"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "UN News"
+url = "https://news.un.org/feed/subscribe/en/news/all/rss.xml"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "ReliefWeb (Updates)"
+url = "https://reliefweb.int/updates/rss.xml"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "Anadolu Agency (World)"
+url = "https://www.aa.com.tr/en/rss/default?cat=world"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "Kyiv Independent"
+url = "https://kyivindependent.com/feed/"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "Times of Israel"
+url = "https://www.timesofisrael.com/feed/"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "Dawn (World)"
+url = "https://www.dawn.com/feeds/world"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "The Hindu (International)"
+url = "https://www.thehindu.com/news/international/feeder/default.rss"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "allAfrica (Latest)"
+url = "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "NHK World-Japan"
+url = "https://www3.nhk.or.jp/nhkworld/en/news/feeds/"
+language = "en"
+status = "proposed"
+
+[[outlet]]
+name = "Yle News (English)"
+url = "https://feeds.yle.fi/uutiset/v1/recent.rss?publisherIds=YLE_NEWS"
+language = "en"
+status = "proposed"

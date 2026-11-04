@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Sample Atom Wire</title>
+  <entry>
+    <title>Election results confirmed</title>
+    <link rel="alternate" href="https://example.org/atom/election"/>
+    <link rel="self" href="https://example.org/atom.xml"/>
+    <id>urn:uuid:1111</id>
+    <published>2026-11-03T08:15:00Z</published>
+    <summary type="html">&lt;em&gt;Officials&lt;/em&gt; certified the count on Monday.</summary>
+  </entry>
+  <entry>
+    <title>Port strike enters second week</title>
+    <link href="https://example.org/atom/port-strike"/>
+    <updated>2026-11-03T10:00:00+02:00</updated>
+    <content type="text">Dockworkers rejected the latest offer.</content>
+  </entry>
+</feed>
