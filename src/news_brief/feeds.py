@@ -36,6 +36,7 @@ class Outlet:
     url: str
     language: str
     status: str  # "proposed" until the user approves it, then "approved"
+    ranks: bool = True  # False: its items are used, but do not count towards how big an event is
 
 
 @dataclass(frozen=True)
@@ -243,6 +244,7 @@ def load_outlets(path: Path) -> list[Outlet]:
             url=row["url"],
             language=row.get("language", "en"),
             status=status,
+            ranks=bool(row.get("ranks", True)),
         ))
     return outlets
 

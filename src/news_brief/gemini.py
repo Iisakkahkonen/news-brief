@@ -13,23 +13,31 @@ Rules this client keeps:
 
 * The key goes in a header, never in the URL, and is scrubbed from any error text.
 * ``store`` is false so Google does not keep the prompt.
-* Calls are spaced out, and a failed call is retried at most once. A daily-quota
-  error, or any 401/402/403, ends the run at once (ModelUnavailable) because
-  waiting will not fix it and retrying could only waste quota.
+* Calls are spaced out. When a model is overloaded the next model in the list is
+  tried straight away (each model has its own capacity); if every model fails,
+  the client waits once and goes through the list one more time, then gives up.
+  A daily-quota error, or any 401/402/403, ends the run at once
+  (ModelUnavailable) because waiting will not fix it. A hard cap on HTTP
+  requests per client keeps a run inside the free tier whatever happens.
 """
 
 from __future__ import annotations
 
 import json
 import time
-from collections.abc import Callable
 import urllib.error
 import urllib.request
+from collections import Counter
+from collections.abc import Callable, Sequence
 
 from news_brief.model import ModelError, ModelUnavailable
 
 ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions"
-DEFAULT_MODEL = "gemini-3.8-flash"  # free of charge per Google's pricing page, 2026-11-05
+# All four are listed as free of charge on Google's pricing page (2026-11-05).
+# Order: best quality first; the lighter Flash-Lite models are the last resort.
+DEFAULT_MODELS = ("gemini-3.6-flash", "gemini-3.8-flash",
+                  "gemini-3.5-flash-lite", "gemini-3.1-flash-lite")
+DEFAULT_MAX_REQUESTS = 60
 MAX_ERROR_TEXT = 300
 
 
@@ -41,14 +49,19 @@ class _Retryable(Exception):
 
 
 class GeminiClient:
-    def __init__(self, api_key: str, model: str = DEFAULT_MODEL, *, timeout: float = 60.0,
-                 min_interval: float = 4.0, retry_wait: float = 30.0,
-                 max_output_tokens: int = 4096,
+    def __init__(self, api_key: str, model: str | Sequence[str] = DEFAULT_MODELS, *,
+                 timeout: float = 60.0, min_interval: float = 4.0, retry_wait: float = 30.0,
+                 max_output_tokens: int = 4096, max_requests: int = DEFAULT_MAX_REQUESTS,
                  notify: Callable[[str], None] | None = None) -> None:
         if not api_key or not api_key.strip():
             raise ValueError("a Gemini API key is required")
         self._api_key = api_key.strip()
-        self.model = model
+        names = model.split(",") if isinstance(model, str) else list(model)
+        self.models = [name.strip() for name in names if name.strip()]
+        if not self.models:
+            raise ValueError("at least one model name is required")
+        self._max_requests = max_requests
+        self.usage: Counter[str] = Counter()  # successful answers per model
         self._timeout = timeout
         self._min_interval = min_interval
         self._retry_wait = retry_wait
@@ -59,20 +72,32 @@ class GeminiClient:
 
     # -- public ---------------------------------------------------------------
 
+    @property
+    def model(self) -> str:
+        return self.models[0]
+
     def complete(self, prompt: str) -> str:
         self._pace()
-        try:
-            return self._once(prompt)
-        except _Retryable as first:
-            self._notify(f"    Google replied: {first.message}\n"
-                         f"    waiting {self._retry_wait:.0f}s, then trying once more")
-            time.sleep(self._retry_wait)
-            try:
-                return self._once(prompt)
-            except _Retryable as second:
-                if second.status == 429:
-                    raise ModelUnavailable(f"HTTP 429 twice: {second.message}") from None
-                raise ModelError(f"{second.message} (after one retry)") from None
+        last: _Retryable | None = None
+        for round_number in (1, 2):
+            for index, name in enumerate(self.models):
+                try:
+                    text = self._once(prompt, name)
+                except _Retryable as exc:
+                    last = exc
+                    if index + 1 < len(self.models):
+                        self._notify(f"    {name} replied: {exc.message}\n"
+                                     f"    trying {self.models[index + 1]} instead")
+                    continue
+                self.usage[name] += 1
+                return text
+            if round_number == 1:
+                self._notify(f"    no model could answer ({last.message})\n"
+                             f"    waiting {self._retry_wait:.0f}s, then trying once more")
+                time.sleep(self._retry_wait)
+        if last.status == 429:
+            raise ModelUnavailable(f"HTTP 429 twice: {last.message}")
+        raise ModelError(f"{last.message} (after one retry)")
 
     # -- internals ------------------------------------------------------------
 
@@ -85,9 +110,12 @@ class GeminiClient:
     def _clean(self, text: str) -> str:
         return text.replace(self._api_key, "[key removed]")[:MAX_ERROR_TEXT]
 
-    def _once(self, prompt: str) -> str:
+    def _once(self, prompt: str, model: str) -> str:
+        if self.requests_made >= self._max_requests:
+            raise ModelUnavailable(
+                f"request cap of {self._max_requests} reached for this run")
         body = json.dumps({
-            "model": self.model,
+            "model": model,
             "input": prompt,
             "store": False,
             "generation_config": {

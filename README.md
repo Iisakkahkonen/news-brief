@@ -23,7 +23,10 @@ schedule come next.
    it lists sources; every source is one of that event's items; every number
    and every capitalised word (names, places, dates) appears in the cited
    items. Dropped sentences are written to a log, never sent.
-5. **Render** - plain text with numbered, credited sources.
+5. **Render** - plain text of about a 2-minute read. Every sentence shows its
+   sources as a compact range such as `[1-5]`, and every cited item is listed
+   at the bottom with outlet, headline and link. The run stops asking the model
+   for more events once the brief is long enough, which also saves free quota.
 
 What the check does **not** prove: that a sentence is true, or that the cited
 item supports its meaning. It proves the specifics (who, where, how many) came
@@ -80,7 +83,8 @@ python -m news_brief --show-groups      # also print how items group into events
 python -m news_brief --brief            # write the AI brief (needs a Gemini key)
 ```
 
-`--brief` writes `out/brief-<date-time>.txt` and `out/check-log-<date-time>.txt` (what
+`--brief` writes `out/brief-<date-time>.txt`, `out/items-<date-time>.json` (every
+fetched item, for checking the grouping later) and `out/check-log-<date-time>.txt` (what
 the source check removed, and why).
 
 ### Gemini API key (free)
@@ -100,10 +104,26 @@ The brief is written by Google's Gemini API on its free tier.
    python -m news_brief --brief
    ```
 
-Safeguards in the code: at most `--max-calls` model calls per run (default 15);
-calls are spaced out; a failed call is retried once; a quota, permission or
-payment error stops the run instead of retrying; the key is sent in a request
-header and removed from any error text; Google is asked not to store prompts.
+Options for `--brief`: `--minutes 2` (reading-time target, 0 for no limit),
+`--model a,b,c` (models in order of preference), `--min-outlets 2`,
+`--max-calls 15`.
+
+Google's free models are often overloaded ("503 high demand"). The client tries
+the next model in the list straight away; if all are busy it waits once and goes
+round again. The brief names which model wrote it.
+
+Safeguards in the code: at most `--max-calls` model calls and 60 HTTP requests
+per run; calls are spaced out; a quota, permission or payment error stops the
+run instead of retrying; one failed event is skipped but three errors in a row
+stop the run; the key is sent in a request header and removed from any error
+text; Google is asked not to store prompts.
+
+### Which events make the cut
+
+Events are ranked by how many outlets report them. Outlets marked
+`ranks = false` in `config/outlets.toml` (currently ReliefWeb, which publishes
+humanitarian reports rather than breaking news) still supply items but do not
+count towards an event's size.
 
 ## Project layout
 

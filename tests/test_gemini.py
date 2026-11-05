@@ -5,7 +5,7 @@ import urllib.error
 import pytest
 
 from news_brief import gemini
-from news_brief.gemini import DEFAULT_MODEL, ENDPOINT, GeminiClient
+from news_brief.gemini import DEFAULT_MODELS, ENDPOINT, GeminiClient
 from news_brief.model import ModelError, ModelUnavailable
 
 KEY = "AIza-test-key-123"
@@ -57,6 +57,7 @@ def net(monkeypatch):
 
 
 def client(**kw):
+    kw.setdefault("model", "m1")  # one model, so these tests see plain retry behaviour
     kw.setdefault("min_interval", 0)
     kw.setdefault("retry_wait", 7)
     return GeminiClient(KEY, **kw)
@@ -93,8 +94,10 @@ def test_request_shape_key_in_header_only_and_nothing_stored(net):
     assert body["generation_config"]["max_output_tokens"] == 4096
 
 
-def test_default_model_is_set():
-    assert client().model == DEFAULT_MODEL
+def test_default_models_are_the_free_ones_in_order_of_preference():
+    c = GeminiClient(KEY)
+    assert c.models == list(DEFAULT_MODELS)
+    assert c.model == "gemini-3.6-flash"
 
 
 def test_blank_key_is_refused():
@@ -199,8 +202,73 @@ def test_calls_are_spaced_by_the_minimum_interval(net, monkeypatch):
 def test_retry_is_announced_and_requests_are_counted(net):
     messages = []
     net.script = [http_error(503, "service_unavailable", "high demand"), reply("fine")]
-    c = GeminiClient(KEY, min_interval=0, retry_wait=7, notify=messages.append)
+    c = GeminiClient(KEY, "m1", min_interval=0, retry_wait=7, notify=messages.append)
 
     assert c.complete("p") == "fine"
     assert c.requests_made == 2
     assert "high demand" in messages[0] and "waiting 7s" in messages[0]
+
+
+# --- several models: fall through when one is overloaded -------------------------
+
+def test_model_names_can_be_given_as_a_comma_separated_string():
+    assert GeminiClient(KEY, " a , b,,c ").models == ["a", "b", "c"]
+
+
+def test_overloaded_model_falls_through_to_the_next_without_waiting(net):
+    messages = []
+    net.script = [http_error(503, "service_unavailable", "busy"), reply("from b")]
+    c = GeminiClient(KEY, "a,b", min_interval=0, retry_wait=7, notify=messages.append)
+
+    assert c.complete("p") == "from b"
+    assert [json.loads(r.data)["model"] for r in net.requests] == ["a", "b"]
+    assert 7 not in net.sleeps
+    assert "trying b instead" in messages[0]
+    assert dict(c.usage) == {"b": 1}
+
+
+def test_when_every_model_is_busy_it_waits_once_and_goes_round_again(net):
+    net.script = [http_error(503), http_error(503), reply("finally")]
+    c = GeminiClient(KEY, "a,b", min_interval=0, retry_wait=7)
+
+    assert c.complete("p") == "finally"
+    assert 7 in net.sleeps
+    assert [json.loads(r.data)["model"] for r in net.requests] == ["a", "b", "a"]
+
+
+def test_giving_up_after_two_rounds_over_all_models(net):
+    net.script = [http_error(503)] * 4
+    c = GeminiClient(KEY, "a,b", min_interval=0, retry_wait=7)
+
+    with pytest.raises(ModelError, match="after one retry"):
+        c.complete("p")
+    assert len(net.requests) == 4
+
+
+def test_a_daily_quota_error_on_any_model_stops_everything(net):
+    net.script = [http_error(503), http_error(429, "quota_exceeded")]
+    c = GeminiClient(KEY, "a,b,c", min_interval=0, retry_wait=7)
+
+    with pytest.raises(ModelUnavailable):
+        c.complete("p")
+    assert len(net.requests) == 2
+
+
+def test_usage_counts_answers_per_model(net):
+    net.script = [reply("1"), http_error(503), reply("2"), reply("3")]
+    c = GeminiClient(KEY, "a,b", min_interval=0, retry_wait=0)
+    for _ in range(3):
+        c.complete("p")
+    assert dict(c.usage) == {"a": 2, "b": 1}
+    assert c.requests_made == 4
+
+
+def test_hard_cap_on_requests_stops_the_run(net):
+    net.script = [reply("1"), reply("2"), reply("3")]
+    c = GeminiClient(KEY, "a", min_interval=0, max_requests=2)
+
+    c.complete("p")
+    c.complete("p")
+    with pytest.raises(ModelUnavailable, match="request cap of 2"):
+        c.complete("p")
+    assert len(net.requests) == 2

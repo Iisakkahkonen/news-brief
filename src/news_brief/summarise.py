@@ -15,7 +15,8 @@ from news_brief.feeds import outlet_label
 from news_brief.group import Cluster
 from news_brief.model import ModelClient
 
-MAX_SENTENCES = 4
+MAX_SENTENCES = 4        # most the parser will ever accept
+DEFAULT_SENTENCES = 2    # what the prompt asks for: a brief is meant to be a short read
 
 
 class BadModelOutput(ValueError):
@@ -33,7 +34,8 @@ You write one short, neutral summary of a single news event for a daily brief.
 
 Use ONLY the numbered items below. Do not use outside knowledge, and do not add
 any name, place, number, date or detail that is not in the items.
-Write 1 to {max_sentences} plain sentences in a neutral tone. Where outlets
+Write 1 to {max_sentences} plain sentences in a neutral tone, each under about
+30 words, leading with the most important fact. Where outlets
 disagree, say who said what (for example "X said ..., while Y said ...").
 Report claims as claims: use "said" or "according to" for anything an outlet
 attributes to a party, and never state a disputed claim as settled fact.
@@ -51,8 +53,8 @@ Reply with JSON only, no other text, in exactly this shape:
 """
 
 
-def build_prompt(cluster: Cluster) -> str:
-    lines = [RULES.format(max_sentences=MAX_SENTENCES), "Items:"]
+def build_prompt(cluster: Cluster, max_sentences: int = DEFAULT_SENTENCES) -> str:
+    lines = [RULES.format(max_sentences=max_sentences), "Items:"]
     for item in cluster.items:
         detail = f" - {item.summary}" if item.summary else ""
         lines.append(f"[{item.item_id}] ({outlet_label(item.outlet)}) {item.title}{detail}")
@@ -62,7 +64,7 @@ def build_prompt(cluster: Cluster) -> str:
 _FENCE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL | re.IGNORECASE)
 
 
-def parse_response(text: str) -> list[Sentence]:
+def parse_response(text: str, limit: int = MAX_SENTENCES) -> list[Sentence]:
     cleaned = (text or "").strip()
     fenced = _FENCE.match(cleaned)
     if fenced:
@@ -76,7 +78,7 @@ def parse_response(text: str) -> list[Sentence]:
         raise BadModelOutput('expected an object with a "sentences" list')
 
     sentences = []
-    for entry in data["sentences"][:MAX_SENTENCES]:
+    for entry in data["sentences"][:limit]:
         if not isinstance(entry, dict) or not isinstance(entry.get("text"), str):
             raise BadModelOutput("each sentence needs a text string")
         sources = entry.get("sources", [])
@@ -86,5 +88,7 @@ def parse_response(text: str) -> list[Sentence]:
     return sentences
 
 
-def summarise_cluster(cluster: Cluster, model: ModelClient) -> list[Sentence]:
-    return parse_response(model.complete(build_prompt(cluster)))
+def summarise_cluster(cluster: Cluster, model: ModelClient,
+                      max_sentences: int = DEFAULT_SENTENCES) -> list[Sentence]:
+    prompt = build_prompt(cluster, max_sentences)
+    return parse_response(model.complete(prompt), limit=max_sentences)

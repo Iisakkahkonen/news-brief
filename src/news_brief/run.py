@@ -7,7 +7,8 @@ what the model got wrong.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import json
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -22,6 +23,20 @@ class RunResult:
     brief: Brief
     brief_path: Path
     log_path: Path
+    items_path: Path
+
+
+def save_items(items: list[Item], path: Path) -> None:
+    """Every fetched item, so grouping and ranking can be checked offline later."""
+    rows = [
+        {
+            "item_id": i.item_id, "outlet": i.outlet, "title": i.title,
+            "summary": i.summary, "link": i.link,
+            "published": i.published.isoformat() if i.published else None,
+        }
+        for i in items
+    ]
+    path.write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def render_log(brief: Brief, day: date) -> str:
@@ -47,17 +62,22 @@ def render_log(brief: Brief, day: date) -> str:
 
 
 def run_brief(items: list[Item], model: ModelClient, out_dir: Path, when: datetime, *,
-              max_events: int = 12, min_outlets: int = 2,
-              progress: Callable[[str], None] | None = None) -> RunResult:
+              max_events: int = 14, min_outlets: int = 2,
+              progress: Callable[[str], None] | None = None,
+              unranked_outlets: Collection[str] = (),
+              word_budget: int | None = None) -> RunResult:
     """Files are stamped with the time too, so a second run never overwrites the first."""
     brief = build_brief(items, model, max_events=max_events, min_outlets=min_outlets,
-                        progress=progress)
+                        progress=progress, unranked_outlets=unranked_outlets,
+                        word_budget=word_budget)
     day = when.date()
     stamp = when.strftime("%Y-%m-%d-%H%M")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     brief_path = out_dir / f"brief-{stamp}.txt"
     log_path = out_dir / f"check-log-{stamp}.txt"
+    items_path = out_dir / f"items-{stamp}.json"
     brief_path.write_text(render_text(brief, day), encoding="utf-8")
     log_path.write_text(render_log(brief, day), encoding="utf-8")
-    return RunResult(brief, brief_path, log_path)
+    save_items(items, items_path)
+    return RunResult(brief, brief_path, log_path, items_path)

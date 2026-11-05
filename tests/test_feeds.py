@@ -221,3 +221,19 @@ def test_duplicate_links_across_feeds_are_kept_once(monkeypatch):
     items, errors = fetch_all(outlets)
     assert errors == {}
     assert len(items) == 2
+
+
+def test_outlets_rank_by_default_and_can_opt_out(tmp_path):
+    config = tmp_path / "outlets.toml"
+    config.write_text(
+        '[[outlet]]\nname = "A"\nurl = "https://a.example/rss"\n'
+        '[[outlet]]\nname = "B"\nurl = "https://b.example/rss"\nranks = false\n',
+        encoding="utf-8",
+    )
+    assert [o.ranks for o in load_outlets(config)] == [True, False]
+
+
+def test_shipped_config_does_not_let_reliefweb_count_towards_event_size():
+    outlets = {o.name: o for o in load_outlets(Path(__file__).parents[1] / "config" / "outlets.toml")}
+    assert outlets["ReliefWeb (Updates)"].ranks is False
+    assert outlets["BBC News (World)"].ranks is True

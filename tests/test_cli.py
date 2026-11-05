@@ -76,3 +76,17 @@ def test_a_second_run_does_not_overwrite_the_first(tmp_path, day_of_news):
                        max_events=0)
     assert first.brief_path != second.brief_path
     assert first.brief_path.exists() and second.brief_path.exists()
+
+
+def test_run_brief_also_saves_the_fetched_items_for_later_diagnosis(tmp_path, day_of_news):
+    from datetime import datetime
+
+    from news_brief.run import run_brief
+    from test_summarise import ScriptedModel
+
+    result = run_brief(day_of_news, ScriptedModel(), tmp_path, datetime(2026, 11, 5, 18, 46),
+                       max_events=0)
+    rows = json.loads(result.items_path.read_text(encoding="utf-8"))
+
+    assert result.items_path.name == "items-2026-11-05-1846.json"
+    assert [r["item_id"] for r in rows] == [i.item_id for i in day_of_news]

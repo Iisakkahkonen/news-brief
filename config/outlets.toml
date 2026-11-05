@@ -58,6 +58,7 @@ name = "ReliefWeb (Updates)"
 url = "https://reliefweb.int/updates/rss.xml"
 language = "en"
 status = "approved"
+ranks = false   # humanitarian reports, not breaking news: used, but not counted when ranking events
 
 [[outlet]]
 name = "Anadolu Agency (World)"

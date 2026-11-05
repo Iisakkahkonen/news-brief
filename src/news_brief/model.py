@@ -41,6 +41,11 @@ class BudgetedModel:
         self.max_calls = max_calls
         self.calls = 0
 
+    @property
+    def usage(self) -> dict[str, int]:
+        """Answers per model name, when the wrapped client keeps that count."""
+        return dict(getattr(self._inner, "usage", {}) or {})
+
     def complete(self, prompt: str) -> str:
         if self.calls >= self.max_calls:
             raise BudgetExceeded(f"call budget of {self.max_calls} reached")
