@@ -48,6 +48,11 @@ class Item:
     published: datetime | None
 
 
+def outlet_label(outlet: str) -> str:
+    """"The Guardian (World)" -> "The Guardian": the outlet name without its feed section."""
+    return re.sub(r"\s*\(.*?\)\s*$", "", outlet)
+
+
 class _TextExtractor(html.parser.HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)

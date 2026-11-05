@@ -10,7 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 
-from news_brief.feeds import Item
+from news_brief.feeds import Item, outlet_label
 from news_brief.group import DEFAULT_THRESHOLD, group_items
 from news_brief.model import BudgetExceeded, ModelClient, ModelError, ModelUnavailable
 from news_brief.summarise import BadModelOutput, Sentence, summarise_cluster
@@ -104,14 +104,15 @@ def render_text(brief: Brief, day: date) -> str:
     def cite(item: Item) -> int:
         if item.item_id not in numbers:
             numbers[item.item_id] = len(numbers) + 1
-            source_lines.append(f"[{numbers[item.item_id]}] {item.outlet}: {item.title}\n    {item.link}")
+            source_lines.append(
+                f"[{numbers[item.item_id]}] {outlet_label(item.outlet)}: {item.title}\n    {item.link}")
         return numbers[item.item_id]
 
     out = [f"WORLD BRIEF - {day.isoformat()}", ""]
     if not brief.sections:
         out += ["No events passed the source check today.", ""]
     for section in brief.sections:
-        out.append(f"{section.lead.title} ({section.lead.outlet})")
+        out.append(f"{section.lead.title} ({outlet_label(section.lead.outlet)})")
         for sentence in section.sentences:
             marks = "".join(f"[{cite(section.items[s])}]" for s in sentence.sources)
             out.append(f"  {sentence.text} {marks}")

@@ -11,6 +11,7 @@ import json
 import re
 from dataclasses import dataclass
 
+from news_brief.feeds import outlet_label
 from news_brief.group import Cluster
 from news_brief.model import ModelClient
 
@@ -42,7 +43,8 @@ Keep the certainty and tense of the items. If an item says something is
 expected, planned, alleged or claimed, do not write that it has happened.
 To attribute a claim to an outlet, use the outlet name exactly as written in
 the item list and cite that outlet's item.
-Every sentence must list the id of each item it is based on.
+Every sentence must list the id of each item it is based on, in its "sources"
+list only. Never write item ids or square brackets inside the sentence text.
 
 Reply with JSON only, no other text, in exactly this shape:
 {{"sentences": [{{"text": "...", "sources": ["id1", "id2"]}}]}}
@@ -53,7 +55,7 @@ def build_prompt(cluster: Cluster) -> str:
     lines = [RULES.format(max_sentences=MAX_SENTENCES), "Items:"]
     for item in cluster.items:
         detail = f" - {item.summary}" if item.summary else ""
-        lines.append(f"[{item.item_id}] ({item.outlet}) {item.title}{detail}")
+        lines.append(f"[{item.item_id}] ({outlet_label(item.outlet)}) {item.title}{detail}")
     return "\n".join(lines)
 
 

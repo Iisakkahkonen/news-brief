@@ -225,3 +225,42 @@ def test_a_first_name_the_source_does_not_contain_is_still_rejected():
     # "Benjamin Netanyahu" when the items only say "Netanyahu": knowledge from outside.
     assert real("Critics said Benjamin Netanyahu pulled Trump into the war.", "tr") == \
         "name not in cited items: benjamin"
+
+
+# --- second real check log (2026-11-05 19:08): label noise, an id in the text --------
+
+WORLD = make_item("w1", "The Guardian (World)", "Wong sentenced to 10 years", "He pleaded guilty.")
+INTL = make_item("h1", "The Hindu (International)", "Wong faces a second term", "Already serving time.")
+ENG = make_item("f1", "France 24 (English)", "Russell Brand found guilty", "A jury convicted him.")
+ANA = make_item("a1", "Anadolu Agency (World)", "Israeli forces detain 45 Palestinians", "Raids in the West Bank.")
+LOGGED = {i.item_id: i for i in (WORLD, INTL, ENG, ANA)}
+
+
+def logged(text, *sources):
+    return verify_sentence(Sentence(text, tuple(sources)), LOGGED)
+
+
+def test_outlet_named_without_its_feed_section_passes():
+    assert logged("According to The Guardian, Wong pleaded guilty.", "w1") is None
+    assert logged("The Hindu reported that Wong is already serving time.", "h1") is None
+    assert logged("A jury convicted Russell Brand, according to France 24.", "f1") is None
+
+
+def test_outlet_with_its_feed_section_in_the_text_is_still_rejected():
+    # the model is no longer shown "(World)" so writing it means it made something up
+    assert logged("According to The Guardian (World), Wong pleaded guilty.", "w1") == \
+        "name not in cited items: world"
+
+
+def test_an_item_id_written_into_the_sentence_is_rejected():
+    reason = verify_sentence(
+        Sentence("Brand was convicted [98e9f6f3000e].", ("98e9f6f3000e",)),
+        {"98e9f6f3000e": make_item("98e9f6f3000e", "BBC", "Brand convicted", "A jury decided.")})
+    assert reason is not None and reason.startswith("number not in cited items")
+
+
+def test_additionally_and_similar_openers_are_harmless():
+    assert logged("Additionally, Anadolu Agency reported that Israeli forces detained 45 "
+                  "Palestinians in West Bank raids.", "a1") is None
+    for opener in ("Furthermore", "Moreover", "Separately", "Elsewhere", "Overall"):
+        assert names_in(f"{opener}, forces detained people.") == []

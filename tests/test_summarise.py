@@ -132,3 +132,19 @@ def test_prompt_asks_for_exact_names_and_unchanged_certainty():
     assert "do not add" in prompt and "first names" in prompt
     assert "expected, planned, alleged or claimed" in prompt
     assert "attribute a claim to an outlet" in prompt
+
+
+def test_prompt_shows_outlets_without_their_feed_section():
+    mixed = Cluster([
+        make_item("g1", "The Guardian (World)", "Wong sentenced"),
+        make_item("h1", "The Hindu (International)", "Wong faces a second term"),
+    ])
+    prompt = build_prompt(mixed)
+    assert "[g1] (The Guardian) Wong sentenced" in prompt
+    assert "[h1] (The Hindu) Wong faces a second term" in prompt
+    assert "(World)" not in prompt and "(International)" not in prompt
+
+
+def test_prompt_forbids_ids_and_brackets_inside_sentences():
+    prompt = build_prompt(cluster())
+    assert "Never write item ids or square brackets inside the sentence text" in prompt

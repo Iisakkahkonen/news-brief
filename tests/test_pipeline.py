@@ -203,3 +203,20 @@ def test_progress_reports_each_event_and_its_outcome(day_of_news):
     assert lines[1].startswith("[1/2] Ceasefire talks resume in Geneva")
     assert "    kept 2 sentence(s), removed 0" in lines
     assert any(line.startswith("[2/2]") for line in lines)
+
+
+def test_rendered_brief_shows_outlets_without_their_feed_section():
+    from conftest import make_item
+
+    items = [
+        make_item("g1", "The Guardian (World)", "Wong sentenced to ten years", "Prison term.", 7),
+        make_item("h1", "The Hindu (International)", "Wong sentenced to ten years in prison",
+                  "Prison term.", 8),
+    ]
+    model = ScriptedModel(answer(("Wong was sentenced to ten years.", ["g1", "h1"])))
+    text = render_text(build_brief(items, model, min_outlets=2), date(2026, 11, 5))
+
+    assert "Wong sentenced to ten years (The Guardian)" in text
+    assert "[1] The Guardian: Wong sentenced to ten years" in text
+    assert "[2] The Hindu: Wong sentenced to ten years in prison" in text
+    assert "(World)" not in text and "(International)" not in text

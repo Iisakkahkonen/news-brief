@@ -25,7 +25,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from news_brief.feeds import Item
+from news_brief.feeds import Item, outlet_label  # noqa: F401  (re-exported)
 from news_brief.summarise import Sentence
 
 NUMBER_WORDS = {
@@ -47,7 +47,8 @@ a an the this that these those in on at by for from with without after before
 during while as but and or if when where which who what however meanwhile
 also officials sources reports according it its he she they there here
 following despite amid since until among throughout although because though
-whereas instead about around nearly almost roughly over under more most some several many few
+whereas instead additionally furthermore moreover separately elsewhere
+overall similarly notably reportedly about around nearly almost roughly over under more most some several many few
 all both each another at least up to only neither either one
 """.split())
 # Deliberately NOT exempt: weekdays, months, "today", "yesterday" and other time
@@ -70,11 +71,6 @@ def _normalise(text: str) -> str:
 
 def _words(text: str) -> list[str]:
     return re.findall(r"[a-z0-9]+", _normalise(text).lower())
-
-
-def outlet_label(outlet: str) -> str:
-    """"The Guardian (World)" -> "The Guardian": the name a sentence may attribute to."""
-    return re.sub(r"\s*\(.*?\)\s*$", "", outlet)
 
 
 def numbers_in(text: str) -> set[str]:
