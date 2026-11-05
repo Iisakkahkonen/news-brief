@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# local run output (brief, check log, saved items)
+out/
+items.json
