@@ -194,3 +194,13 @@ def test_calls_are_spaced_by_the_minimum_interval(net, monkeypatch):
     c.complete("two")
 
     assert net.sleeps == [pytest.approx(3.0)]
+
+
+def test_retry_is_announced_and_requests_are_counted(net):
+    messages = []
+    net.script = [http_error(503, "service_unavailable", "high demand"), reply("fine")]
+    c = GeminiClient(KEY, min_interval=0, retry_wait=7, notify=messages.append)
+
+    assert c.complete("p") == "fine"
+    assert c.requests_made == 2
+    assert "high demand" in messages[0] and "waiting 7s" in messages[0]

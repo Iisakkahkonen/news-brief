@@ -7,8 +7,9 @@ what the model got wrong.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from news_brief.feeds import Item
@@ -45,13 +46,18 @@ def render_log(brief: Brief, day: date) -> str:
     return "\n".join(lines)
 
 
-def run_brief(items: list[Item], model: ModelClient, out_dir: Path, day: date, *,
-              max_events: int = 12, min_outlets: int = 2) -> RunResult:
-    brief = build_brief(items, model, max_events=max_events, min_outlets=min_outlets)
+def run_brief(items: list[Item], model: ModelClient, out_dir: Path, when: datetime, *,
+              max_events: int = 12, min_outlets: int = 2,
+              progress: Callable[[str], None] | None = None) -> RunResult:
+    """Files are stamped with the time too, so a second run never overwrites the first."""
+    brief = build_brief(items, model, max_events=max_events, min_outlets=min_outlets,
+                        progress=progress)
+    day = when.date()
+    stamp = when.strftime("%Y-%m-%d-%H%M")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    brief_path = out_dir / f"brief-{day.isoformat()}.txt"
-    log_path = out_dir / f"check-log-{day.isoformat()}.txt"
+    brief_path = out_dir / f"brief-{stamp}.txt"
+    log_path = out_dir / f"check-log-{stamp}.txt"
     brief_path.write_text(render_text(brief, day), encoding="utf-8")
     log_path.write_text(render_log(brief, day), encoding="utf-8")
     return RunResult(brief, brief_path, log_path)

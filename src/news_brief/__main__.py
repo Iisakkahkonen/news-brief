@@ -58,12 +58,19 @@ def make_brief(items, errors, args) -> int:
     if errors:
         print(f"Note: {len(errors)} feed(s) failed: {', '.join(errors)}")
 
-    model = BudgetedModel(GeminiClient(api_key, args.model), max_calls=args.max_calls)
-    result = run_brief(items, model, args.out_dir, datetime.now().date(),
-                       max_events=args.max_events, min_outlets=args.min_outlets)
+    def say(message: str) -> None:
+        print(message, flush=True)
+
+    client = GeminiClient(api_key, args.model, notify=say)
+    model = BudgetedModel(client, max_calls=args.max_calls)
+    say(f"Fetched {len(items)} items. Using model {args.model}; this takes a few minutes.")
+    result = run_brief(items, model, args.out_dir, datetime.now(),
+                       max_events=args.max_events, min_outlets=args.min_outlets,
+                       progress=say)
 
     brief = result.brief
-    print(f"Model calls used: {model.calls} of {args.max_calls}")
+    print(f"\nModel calls used: {model.calls} of {args.max_calls} "
+          f"({client.requests_made} requests sent to Google, retries included)")
     print(f"Events in brief: {len(brief.sections)}; sentences removed by the source check: "
           f"{len(brief.rejections)}; events left out: {len(brief.skipped_events)}")
     if brief.incomplete_reason:

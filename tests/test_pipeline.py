@@ -155,3 +155,51 @@ def test_model_sees_at_most_the_prompt_limit_and_cannot_cite_hidden_items():
     assert f"[{hidden}]" not in model.prompts[0]
     assert [s.text for s in brief.sections[0].sentences] == ["Quake strikes coast."]
     assert any(hidden in r.rejection.reason for r in brief.rejections)
+
+
+# --- error policy and progress --------------------------------------------------
+
+def test_an_overloaded_model_skips_one_event_and_carries_on(day_of_news):
+    from news_brief.model import ModelError
+
+    model = ScriptedModel(ModelError("HTTP 503 overloaded (after one retry)"), FLOOD_OK)
+    brief = build_brief(day_of_news, model, min_outlets=2)
+
+    assert brief.incomplete_reason is None
+    assert len(brief.sections) == 1                      # the second event still made it
+    assert brief.skipped_events[0][1].startswith("model error: HTTP 503")
+
+
+def test_three_model_errors_in_a_row_end_the_run():
+    from news_brief.model import ModelError
+    from conftest import make_item
+
+    items = []
+    for n in range(5):                                   # five distinct two-outlet events
+        items += [make_item(f"e{n}a", "A", f"Topic{n}x Topic{n}y happened", hour=1),
+                  make_item(f"e{n}b", "B", f"Topic{n}x Topic{n}y occurred", hour=2)]
+    model = ScriptedModel(*[ModelError("HTTP 503") for _ in range(5)])
+    brief = build_brief(items, model, min_outlets=2)
+
+    assert len(model.prompts) == 3
+    assert brief.incomplete_reason.startswith("3 model errors in a row")
+
+
+def test_a_success_resets_the_error_count(day_of_news):
+    from news_brief.model import ModelError
+
+    items = day_of_news
+    model = ScriptedModel(ModelError("HTTP 503"), FLOOD_OK)
+    brief = build_brief(items, model, min_outlets=2, max_consecutive_errors=2)
+    assert brief.incomplete_reason is None
+
+
+def test_progress_reports_each_event_and_its_outcome(day_of_news):
+    lines = []
+    build_brief(day_of_news, ScriptedModel(GENEVA_OK, FLOOD_OK), min_outlets=2,
+                progress=lines.append)
+
+    assert lines[0].startswith("7 items ->") and "summarising 2" in lines[0]
+    assert lines[1].startswith("[1/2] Ceasefire talks resume in Geneva")
+    assert "    kept 2 sentence(s), removed 0" in lines
+    assert any(line.startswith("[2/2]") for line in lines)

@@ -74,7 +74,7 @@ python -m news_brief --show-groups      # also print how items group into events
 python -m news_brief --brief            # write the AI brief (needs a Gemini key)
 ```
 
-`--brief` writes `out/brief-<date>.txt` and `out/check-log-<date>.txt` (what
+`--brief` writes `out/brief-<date-time>.txt` and `out/check-log-<date-time>.txt` (what
 the source check removed, and why).
 
 ### Gemini API key (free)

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Callable
 import urllib.error
 import urllib.request
 
@@ -42,7 +43,8 @@ class _Retryable(Exception):
 class GeminiClient:
     def __init__(self, api_key: str, model: str = DEFAULT_MODEL, *, timeout: float = 60.0,
                  min_interval: float = 4.0, retry_wait: float = 30.0,
-                 max_output_tokens: int = 4096) -> None:
+                 max_output_tokens: int = 4096,
+                 notify: Callable[[str], None] | None = None) -> None:
         if not api_key or not api_key.strip():
             raise ValueError("a Gemini API key is required")
         self._api_key = api_key.strip()
@@ -52,6 +54,8 @@ class GeminiClient:
         self._retry_wait = retry_wait
         self._max_output_tokens = max_output_tokens
         self._last_call: float | None = None
+        self._notify = notify or (lambda message: None)
+        self.requests_made = 0  # HTTP requests sent, retries included
 
     # -- public ---------------------------------------------------------------
 
@@ -60,6 +64,8 @@ class GeminiClient:
         try:
             return self._once(prompt)
         except _Retryable as first:
+            self._notify(f"    Google replied: {first.message}\n"
+                         f"    waiting {self._retry_wait:.0f}s, then trying once more")
             time.sleep(self._retry_wait)
             try:
                 return self._once(prompt)
@@ -94,6 +100,7 @@ class GeminiClient:
             headers={"Content-Type": "application/json", "x-goog-api-key": self._api_key},
         )
         self._last_call = time.monotonic()
+        self.requests_made += 1
         try:
             with urllib.request.urlopen(request, timeout=self._timeout) as response:
                 raw = response.read()

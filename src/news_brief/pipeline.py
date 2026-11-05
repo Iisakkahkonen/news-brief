@@ -6,12 +6,13 @@ in, and a Brief comes out. Every sentence in a Brief has passed verify.py.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 
 from news_brief.feeds import Item
 from news_brief.group import DEFAULT_THRESHOLD, group_items
-from news_brief.model import ModelClient, ModelError
+from news_brief.model import BudgetExceeded, ModelClient, ModelError, ModelUnavailable
 from news_brief.summarise import BadModelOutput, Sentence, summarise_cluster
 from news_brief.verify import Rejection, verify
 
@@ -38,24 +39,56 @@ class Brief:
 
 
 def build_brief(items: list[Item], model: ModelClient, *, max_events: int = 12,
-                min_outlets: int = 1, threshold: float = DEFAULT_THRESHOLD) -> Brief:
-    brief = Brief()
-    clusters = [c for c in group_items(items, threshold) if len(c.outlets) >= min_outlets]
+                min_outlets: int = 1, threshold: float = DEFAULT_THRESHOLD,
+                progress: Callable[[str], None] | None = None,
+                max_consecutive_errors: int = 3) -> Brief:
+    """Group, summarise and verify.
 
-    for cluster in clusters[:max_events]:
+    Error policy: a quota, permission or budget problem ends the run at once.
+    A one-off model error (for example Google being overloaded) skips that
+    event and carries on, but several in a row end the run so that a
+    permanent fault cannot keep hammering the service.
+    """
+    say = progress or (lambda message: None)
+    brief = Brief()
+    all_clusters = group_items(items, threshold)
+    clusters = [c for c in all_clusters if len(c.outlets) >= min_outlets]
+    chosen = clusters[:max_events]
+    say(f"{len(items)} items -> {len(all_clusters)} groups; {len(clusters)} reported by at "
+        f"least {min_outlets} outlet(s); summarising {len(chosen)}")
+
+    errors_in_a_row = 0
+    for number, cluster in enumerate(chosen, 1):
         cluster = cluster.for_prompt()
         headline = cluster.lead.title
+        say(f"[{number}/{len(chosen)}] {headline[:80]} "
+            f"({len(cluster.items)} items, {len(cluster.outlets)} outlets)")
         try:
             sentences = summarise_cluster(cluster, model)
         except BadModelOutput as exc:
+            errors_in_a_row = 0  # the model did answer
             brief.skipped_events.append((headline, f"unusable model output: {exc}"))
+            say("    unusable model answer, event skipped")
             continue
-        except ModelError as exc:
+        except (ModelUnavailable, BudgetExceeded) as exc:
             brief.incomplete_reason = f"{type(exc).__name__}: {exc}"
+            say(f"    stopping: {exc}")
             break
+        except ModelError as exc:
+            errors_in_a_row += 1
+            brief.skipped_events.append((headline, f"model error: {exc}"))
+            say(f"    model error, event skipped: {exc}")
+            if errors_in_a_row >= max_consecutive_errors:
+                brief.incomplete_reason = (
+                    f"{errors_in_a_row} model errors in a row, last: {exc}")
+                say("    stopping: too many model errors in a row")
+                break
+            continue
 
+        errors_in_a_row = 0
         accepted, rejected = verify(sentences, cluster.by_id())
         brief.rejections.extend(LoggedRejection(headline, r) for r in rejected)
+        say(f"    kept {len(accepted)} sentence(s), removed {len(rejected)}")
         if accepted:
             brief.sections.append(Section(cluster.lead, accepted, cluster.by_id()))
         else:
