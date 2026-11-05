@@ -124,3 +124,11 @@ def test_provider_refusal_propagates_so_the_run_can_stop():
     model = ScriptedModel(ModelUnavailable("HTTP 429"))
     with pytest.raises(ModelUnavailable):
         summarise_cluster(cluster(), model)
+
+
+def test_prompt_asks_for_exact_names_and_unchanged_certainty():
+    prompt = build_prompt(cluster())
+    assert "exactly as the items do" in prompt
+    assert "do not add" in prompt and "first names" in prompt
+    assert "expected, planned, alleged or claimed" in prompt
+    assert "attribute a claim to an outlet" in prompt

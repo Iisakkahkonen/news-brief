@@ -167,3 +167,61 @@ def test_names_in_skips_function_words_and_lowercase():
 
 def test_names_in_skips_number_words_that_start_a_sentence():
     assert names_in("Fourteen people died and Two million fled Gaza.") == ["gaza"]
+
+
+# --- found in the first real check log (2026-11-05): false alarms and one true catch ----
+
+ARAB = make_item("ar", "Anadolu Agency (World)",
+                 "Arab party recommends opposition leader Eisenkot to form Israeli government",
+                 "Israel's Arab-majority lists won 19 seats after the election.")
+GUARD = make_item("gu", "The Guardian (World)", "Wong sentenced to 10 years",
+                  "The 30-year-old pleaded guilty in September.")
+TRUMP = make_item("tr", "NPR (World)", "Trump plans to end US military aid to Israel",
+                  "Critics in the U.S. said Netanyahu pulled Trump into the war.")
+REAL = {i.item_id: i for i in (ARAB, GUARD, TRUMP)}
+
+
+def real(text, *sources):
+    return verify_sentence(Sentence(text, tuple(sources)), REAL)
+
+
+def test_hyphenated_compound_is_checked_by_its_capitalised_part():
+    assert real("Following the election, Arab-majority lists won 19 seats.", "ar") is None
+
+
+def test_only_the_capitalised_part_of_a_hyphenated_word_is_a_name():
+    assert names_in("Arab-majority lists and El-Sayed") == ["arab", "el", "sayed"]
+
+
+def test_hyphenated_name_still_has_to_be_in_the_source():
+    assert real("Kurdish-majority lists won 19 seats.", "ar") == \
+        "name not in cited items: kurdish"
+
+
+def test_dotted_abbreviations_match_the_source():
+    assert real("Critics in the U.S. said Netanyahu pulled Trump into the war.", "tr") is None
+    assert real("Critics in the US said Netanyahu pulled Trump into the war.", "tr") is None
+    assert names_in("U.S.-Israel ties and the U.K.") == ["us", "israel", "uk"]
+
+
+def test_attributing_to_an_outlet_is_allowed_when_that_outlet_is_cited():
+    assert real("According to The Guardian, the 30-year-old pleaded guilty in September.",
+                "gu") is None
+
+
+def test_attributing_to_an_outlet_that_was_not_cited_is_rejected():
+    assert real("According to Al Jazeera, the 30-year-old pleaded guilty in September.",
+                "gu") == "name not in cited items: al, jazeera"
+
+
+def test_outlet_label_drops_the_feed_section():
+    from news_brief.verify import outlet_label
+    assert outlet_label("The Guardian (World)") == "The Guardian"
+    assert outlet_label("Al Jazeera (All)") == "Al Jazeera"
+    assert outlet_label("Times of Israel") == "Times of Israel"
+
+
+def test_a_first_name_the_source_does_not_contain_is_still_rejected():
+    # "Benjamin Netanyahu" when the items only say "Netanyahu": knowledge from outside.
+    assert real("Critics said Benjamin Netanyahu pulled Trump into the war.", "tr") == \
+        "name not in cited items: benjamin"

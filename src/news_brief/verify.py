@@ -46,7 +46,8 @@ FUNCTION_WORDS = frozenset("""
 a an the this that these those in on at by for from with without after before
 during while as but and or if when where which who what however meanwhile
 also officials sources reports according it its he she they there here
-about around nearly almost roughly over under more most some several many few
+following despite amid since until among throughout although because though
+whereas instead about around nearly almost roughly over under more most some several many few
 all both each another at least up to only neither either one
 """.split())
 # Deliberately NOT exempt: weekdays, months, "today", "yesterday" and other time
@@ -62,8 +63,18 @@ class Rejection:
     reason: str
 
 
+def _normalise(text: str) -> str:
+    """Make "U.S." and "U.K." single words ("US", "UK") instead of letters split at the dots."""
+    return re.sub(r"\b(?:[A-Za-z]\.){2,}", lambda m: m.group(0).replace(".", ""), text)
+
+
 def _words(text: str) -> list[str]:
-    return re.findall(r"[a-z0-9]+", text.lower())
+    return re.findall(r"[a-z0-9]+", _normalise(text).lower())
+
+
+def outlet_label(outlet: str) -> str:
+    """"The Guardian (World)" -> "The Guardian": the name a sentence may attribute to."""
+    return re.sub(r"\s*\(.*?\)\s*$", "", outlet)
 
 
 def numbers_in(text: str) -> set[str]:
@@ -90,11 +101,15 @@ def magnitudes_in(text: str) -> set[str]:
 def names_in(text: str) -> list[str]:
     """Capitalised words, lower-cased, minus harmless function words."""
     names = []
-    for word in re.findall(r"[A-Z][A-Za-z\-]*", text):
-        lowered = word.lower()
-        if lowered in FUNCTION_WORDS or lowered in NUMBER_WORDS or lowered in MAGNITUDES:
-            continue  # numbers and quantities are checked separately
-        names.append(lowered)
+    for word in re.findall(r"[A-Z][A-Za-z]*(?:-[A-Za-z]+)*", _normalise(text)):
+        # "Arab-majority" is checked as "Arab"; only the capitalised parts are names.
+        for part in word.split("-"):
+            lowered = part.lower()
+            if not part[0].isupper():
+                continue
+            if lowered in FUNCTION_WORDS or lowered in NUMBER_WORDS or lowered in MAGNITUDES:
+                continue  # numbers and quantities are checked separately
+            names.append(lowered)
     return names
 
 
@@ -122,8 +137,11 @@ def verify_sentence(sentence: Sentence, allowed: dict[str, Item]) -> str | None:
     if unknown:
         return f"source id not among this event's items: {', '.join(unknown)}"
 
+    # The outlet's name counts as source text: "According to The Guardian" is
+    # allowed when, and only when, the sentence cites a Guardian item.
     source_text = " ".join(
-        f"{allowed[s].title} {allowed[s].summary}" for s in sentence.sources
+        f"{outlet_label(allowed[s].outlet)} {allowed[s].title} {allowed[s].summary}"
+        for s in sentence.sources
     )
 
     missing_numbers = sorted(numbers_in(sentence.text) - numbers_in(source_text))

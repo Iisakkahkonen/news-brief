@@ -31,6 +31,12 @@ from the cited text and not from the model's imagination. It errs on the side
 of dropping good sentences (for example "2 million" will not match
 "2,000,000").
 
+It also cannot catch a change in certainty. In the first real run, a headline
+saying hundreds of thousands were *expected* to protest became a summary
+sentence saying they *joined*: every name and number was in the sources, so
+the check passed it. The prompt now tells the model to keep tense and certainty
+as in the items, but that is an instruction, not a guarantee.
+
 ### Wording rules given to the model
 
 - Use only the numbered items; add no outside knowledge, names, numbers or dates.

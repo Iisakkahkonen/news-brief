@@ -36,6 +36,12 @@ Write 1 to {max_sentences} plain sentences in a neutral tone. Where outlets
 disagree, say who said what (for example "X said ..., while Y said ...").
 Report claims as claims: use "said" or "according to" for anything an outlet
 attributes to a party, and never state a disputed claim as settled fact.
+Refer to people, places and organisations exactly as the items do: do not add
+first names, titles or descriptions that the items do not contain.
+Keep the certainty and tense of the items. If an item says something is
+expected, planned, alleged or claimed, do not write that it has happened.
+To attribute a claim to an outlet, use the outlet name exactly as written in
+the item list and cite that outlet's item.
 Every sentence must list the id of each item it is based on.
 
 Reply with JSON only, no other text, in exactly this shape:
